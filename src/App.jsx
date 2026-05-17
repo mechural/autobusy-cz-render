@@ -157,14 +157,19 @@ function ProcessRoad({ data, direction, color }) {
   }, []);
 
   const cardSize = 64;
-  const safeWidth = Math.max(pathWidth, cardSize);
-  const startX = isRtl ? safeWidth - cardSize : 0;
-  const centerX = safeWidth / 2 - cardSize / 2;
-  const endX = isRtl ? 0 : safeWidth - cardSize;
-  const measured = pathWidth > cardSize;
+  const nodeSize = 36;
+  const hubSize = 44;
+  const safeWidth = Math.max(pathWidth, 1);
+  const startX = isRtl ? Math.max(safeWidth - cardSize, 0) : 0;
+  const centerX = Math.max(safeWidth / 2 - cardSize / 2, 0);
+  const endX = isRtl ? 0 : Math.max(safeWidth - cardSize, 0);
+  const startNodeLeft = startX + cardSize / 2 - nodeSize / 2;
+  const endNodeLeft = endX + cardSize / 2 - nodeSize / 2;
+  const hubLeft = centerX + cardSize / 2 - hubSize / 2;
+  const lineInset = cardSize / 2;
 
   const movingCardAnimation = {
-    // Stabilní pixelové pozice podle reálné šířky trasy. Tím se odstraní rozdíl canvas vs. Render.
+    // Stabilní pixelové pozice podle reálné šířky trasy. Stejný systém používá autobus, linka i středová ikona.
     x: [startX, centerX, centerX, endX, endX, startX],
     y: [0, 0, 0, 0, 0, 0],
     backgroundColor: isRtl
@@ -199,9 +204,9 @@ function ProcessRoad({ data, direction, color }) {
 
       <div className="relative mt-2 min-h-[7.1rem] flex-1 overflow-visible">
         <div ref={pathRef} className="absolute inset-x-0 top-1/2 h-[7.1rem] -translate-y-1/2">
-          <div className="absolute left-8 right-8 top-[2.25rem] h-3.5 rounded-full bg-[#ebe7df] ring-1 ring-black/5" />
-          <div className="absolute left-12 right-12 top-[2.66rem] h-[2px] rounded-full bg-white/80" />
-          <div className="absolute left-8 right-8 top-[2.25rem] h-3.5 overflow-hidden rounded-full">
+          <div className="absolute top-[2.25rem] h-3.5 rounded-full bg-[#ebe7df] ring-1 ring-black/5" style={{ left: lineInset, right: lineInset }} />
+          <div className="absolute top-[2.66rem] h-[2px] rounded-full bg-white/80" style={{ left: lineInset + 16, right: lineInset + 16 }} />
+          <div className="absolute top-[2.25rem] h-3.5 overflow-hidden rounded-full" style={{ left: lineInset, right: lineInset }}>
             <motion.div
               className={cn("absolute inset-y-0 w-full rounded-full", isOrange ? "bg-[#e65a26]" : "bg-[#0a1020]", isRtl ? "right-0" : "left-0")}
               style={{ transformOrigin: isRtl ? "right center" : "left center" }}
@@ -211,13 +216,15 @@ function ProcessRoad({ data, direction, color }) {
           </div>
 
           <motion.div
-            className={cn("absolute top-[1.56rem] z-10 h-9 w-9 rounded-full border-[5px] border-white shadow-md", endIsLeft ? "left-[0.875rem]" : "right-[0.875rem]")}
+            className="absolute top-[1.56rem] z-10 h-9 w-9 rounded-full border-[5px] border-white shadow-md"
+            style={{ left: endNodeLeft }}
             animate={{ backgroundColor: ["#0a1020", "#0a1020", "#0a1020", "#16a34a", "#16a34a", "#0a1020"] }}
             transition={transition}
           />
-          <div className={cn("absolute top-[1.56rem] h-9 w-9 rounded-full border-[5px] border-white bg-[#0a1020] shadow-md", endIsLeft ? "right-[0.875rem]" : "left-[0.875rem]")} />
+          <div className="absolute top-[1.56rem] h-9 w-9 rounded-full border-[5px] border-white bg-[#0a1020] shadow-md" style={{ left: startNodeLeft }} />
           <motion.div
-            className="absolute left-1/2 top-[1.31rem] z-10 flex h-11 w-11 -translate-x-1/2 items-center justify-center rounded-full border-[5px] border-white bg-[#e65a26] text-white shadow-md"
+            className="absolute top-[1.31rem] z-10 flex h-11 w-11 items-center justify-center rounded-full border-[5px] border-white bg-[#e65a26] text-white shadow-md"
+            style={{ left: hubLeft }}
             animate={{ scale: [1, 1.18, 1.18, 1.05, 1, 1] }}
             transition={transition}
           >
@@ -227,7 +234,6 @@ function ProcessRoad({ data, direction, color }) {
           <motion.div
             key={`${isRtl ? "rtl" : "ltr"}-${Math.round(pathWidth)}`}
             className="absolute left-0 top-[0.62rem] z-40 flex h-16 w-16 items-center justify-center rounded-[1.35rem] ring-1 ring-black/8"
-            style={{ opacity: measured ? 1 : 0 }}
             initial={false}
             animate={movingCardAnimation}
             transition={transition}

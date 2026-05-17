@@ -1,67 +1,113 @@
-import express from "express";
-import cors from "cors";
-import nodemailer from "nodemailer";
-import dotenv from "dotenv";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
+import { createServer } from 'node:http';
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const root = path.join(__dirname, "..");
-const dataDir = path.join(root, "data");
-const submissionsPath = path.join(dataDir, "submissions.json");
-const app = express();
-const PORT = process.env.PORT || 10000;
+const rootDir = path.resolve(__dirname, '..');
+const distDir = path.join(rootDir, 'dist');
+const dataDir = path.join(rootDir, 'data');
+const port = Number(process.env.PORT || 3000);
 
-fs.mkdirSync(dataDir, { recursive: true });
-if (!fs.existsSync(submissionsPath)) fs.writeFileSync(submissionsPath, "[]", "utf8");
+const mimeTypes = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'application/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
+  '.ico': 'image/x-icon',
+  '.txt': 'text/plain; charset=utf-8',
+};
 
-app.use(cors());
-app.use(express.json({ limit: "2mb" }));
-app.use(express.static(path.join(root, "dist")));
-
-function saveSubmission(type, payload) {
-  const current = JSON.parse(fs.readFileSync(submissionsPath, "utf8") || "[]");
-  const record = { id: Date.now(), type, ...payload, receivedAt: new Date().toISOString() };
-  current.unshift(record);
-  fs.writeFileSync(submissionsPath, JSON.stringify(current, null, 2), "utf8");
-  return record;
-}
-
-async function sendMail(subject, payload) {
-  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, MAIL_TO } = process.env;
-  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) return { skipped: true };
-  const transporter = nodemailer.createTransport({
-    host: SMTP_HOST,
-    port: Number(SMTP_PORT || 587),
-    secure: Number(SMTP_PORT) === 465,
-    auth: { user: SMTP_USER, pass: SMTP_PASS },
+function send(res, status, body, type = 'application/json; charset=utf-8') {
+  res.writeHead(status, {
+    'Content-Type': type,
+    'Cache-Control': type.startsWith('text/html') ? 'no-cache' : 'public, max-age=31536000, immutable',
   });
-  const text = Object.entries(payload).map(([key, value]) => `${key}: ${value}`).join("\n");
-  await transporter.sendMail({ from: SMTP_USER, to: MAIL_TO || "sikola@ck-kobra.cz", subject, text });
-  return { sent: true };
+  res.end(body);
 }
 
-app.post("/api/leads", async (req, res) => {
-  const record = saveSubmission("lead", req.body);
-  try { await sendMail(`Autobusy.cz – ${req.body.type || "nová poptávka"}`, record); } catch (error) { console.error(error); }
-  res.json({ ok: true, record });
-});
+async function readBody(req) {
+  const chunks = [];
+  for await (const chunk of req) chunks.push(chunk);
+  const raw = Buffer.concat(chunks).toString('utf8');
+  return raw ? JSON.parse(raw) : {};
+}
 
-app.post("/api/newsletter", async (req, res) => {
-  const record = saveSubmission("newsletter", req.body);
-  try { await sendMail("Autobusy.cz – nový odběr newsletteru", record); } catch (error) { console.error(error); }
-  res.json({ ok: true, record });
-});
+async function appendJsonRecord(fileName, record) {
+  await fs.mkdir(dataDir, { recursive: true });
+  const filePath = path.join(dataDir, fileName);
+  let current = [];
+  try {
+    current = JSON.parse(await fs.readFile(filePath, 'utf8'));
+    if (!Array.isArray(current)) current = [];
+  } catch {}
+  const nextRecord = {
+    id: Date.now(),
+    createdAt: new Date().toISOString(),
+    ...record,
+  };
+  current.unshift(nextRecord);
+  await fs.writeFile(filePath, JSON.stringify(current, null, 2), 'utf8');
+  return nextRecord;
+}
 
-app.get("/api/submissions", (_req, res) => {
-  res.json(JSON.parse(fs.readFileSync(submissionsPath, "utf8") || "[]"));
-});
+async function handleApi(req, res) {
+  try {
+    if (req.method !== 'POST') return send(res, 405, JSON.stringify({ ok: false, error: 'Method not allowed' }));
+    const body = await readBody(req);
 
-app.get("*", (_req, res) => {
-  res.sendFile(path.join(root, "dist", "index.html"));
-});
+    if (req.url === '/api/leads') {
+      const record = await appendJsonRecord('leads.json', body);
+      return send(res, 200, JSON.stringify({ ok: true, record }));
+    }
 
-app.listen(PORT, () => console.log(`Autobusy.cz běží na portu ${PORT}`));
+    if (req.url === '/api/newsletter') {
+      const record = await appendJsonRecord('newsletter.json', body);
+      return send(res, 200, JSON.stringify({ ok: true, record }));
+    }
+
+    return send(res, 404, JSON.stringify({ ok: false, error: 'Unknown API endpoint' }));
+  } catch (error) {
+    return send(res, 500, JSON.stringify({ ok: false, error: error.message || 'Server error' }));
+  }
+}
+
+async function serveStatic(req, res) {
+  const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+  let requestPath = decodeURIComponent(url.pathname);
+
+  if (requestPath === '/') requestPath = '/index.html';
+  let filePath = path.normalize(path.join(distDir, requestPath));
+
+  if (!filePath.startsWith(distDir)) {
+    return send(res, 403, 'Forbidden', 'text/plain; charset=utf-8');
+  }
+
+  try {
+    const stat = await fs.stat(filePath);
+    if (stat.isDirectory()) filePath = path.join(filePath, 'index.html');
+    const data = await fs.readFile(filePath);
+    const ext = path.extname(filePath).toLowerCase();
+    return send(res, 200, data, mimeTypes[ext] || 'application/octet-stream');
+  } catch {
+    try {
+      const data = await fs.readFile(path.join(distDir, 'index.html'));
+      return send(res, 200, data, 'text/html; charset=utf-8');
+    } catch {
+      return send(res, 500, 'Missing dist/index.html', 'text/plain; charset=utf-8');
+    }
+  }
+}
+
+createServer((req, res) => {
+  if (req.url?.startsWith('/api/')) return handleApi(req, res);
+  return serveStatic(req, res);
+}).listen(port, '0.0.0.0', () => {
+  console.log(`Autobusy.cz server running on port ${port}`);
+});
