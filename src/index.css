@@ -2,6 +2,39 @@
 @tailwind components;
 @tailwind utilities;
 
-html { scroll-behavior: smooth; }
-body { margin: 0; background: #ffffff; }
-* { box-sizing: border-box; }
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Lepší fokus pro klávesnici (neruší myš). */
+:focus-visible {
+  outline: 2px solid #e65a26;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Respekt k systémovému nastavení "Reduce Motion". */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Bezpečná zóna na iOS (notch, domácí indikátor) pro spodní mobilní lištu. */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
