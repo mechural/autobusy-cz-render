@@ -98,7 +98,140 @@ function Header({ t, lang, onLanguageChange }) { const [open, setOpen] = useStat
 
 function RouteBusIcon({ className = "", success = false }) { const bodyFill = success ? "#dcfce7" : "#ffffff"; const glassFill = success ? "#bbf7d0" : "#dcecff"; const accent = success ? "#16a34a" : "#e65a26"; return <svg viewBox="0 0 160 86" className={className} fill="none" aria-hidden="true"><path d="M18 31C18 20.5 26.5 12 37 12H103C120.5 12 135.9 23.6 140.7 40.4L145 55.5V63C145 68.5 140.5 73 135 73H25C19.5 73 15 68.5 15 63V34C15 32.3 16.3 31 18 31Z" fill={bodyFill} stroke="#0a1020" strokeWidth="4" strokeLinejoin="round"/><path d="M34 23H60V44H28V31C28 26.6 31.6 23 34 23Z" fill={glassFill} stroke="#0a1020" strokeWidth="3"/><path d="M67 23H95V44H67V23Z" fill={glassFill} stroke="#0a1020" strokeWidth="3"/><path d="M102 23H112C123 23 132 30.2 135 40.7L136 44H102V23Z" fill={glassFill} stroke="#0a1020" strokeWidth="3"/><path d="M23 53H138" stroke={accent} strokeWidth="5" strokeLinecap="round"/><circle cx="42" cy="73" r="10" fill="#0a1020"/><circle cx="115" cy="73" r="10" fill="#0a1020"/><circle cx="42" cy="73" r="4" fill="#ffffff"/><circle cx="115" cy="73" r="4" fill="#ffffff"/></svg>; }
 function AnimatedBusIcon({ duration, delay = 0, className = "" }) { const transition = { duration, times: [0, 0.719, 0.72, 0.9, 1], repeat: Infinity, ease: "linear", delay }; return <div className={cn("relative flex items-center justify-center", className)}><motion.div className="absolute inset-0 flex items-center justify-center" animate={{ opacity: [1, 1, 0, 0, 1] }} transition={transition}><RouteBusIcon className="h-full w-full"/></motion.div><motion.div className="absolute inset-0 flex items-center justify-center" animate={{ opacity: [0, 0, 1, 1, 0] }} transition={transition}><RouteBusIcon success className="h-full w-full"/></motion.div></div>; }
-function ProcessRoad({ data, direction, color }) { const isRtl = direction === "rtl"; const isOrange = color === "orange"; const duration = 11.6; const delay = isRtl ? 0.42 : 0; const times = [0, 0.28, 0.52, 0.76, 0.9, 1]; const transition = { duration, times, repeat: Infinity, ease: "easeInOut", delay }; const iconSwitch = { duration, times: [0, 0.519, 0.52, 0.76, 0.9, 1], repeat: Infinity, ease: "linear", delay }; const movingCardAnimation = { left: isRtl ? ["100%", "50%", "50%", "0%", "0%", "100%"] : ["0%", "50%", "50%", "100%", "100%", "0%"], x: isRtl ? ["-100%", "-50%", "-50%", "0%", "0%", "-100%"] : ["0%", "-50%", "-50%", "-100%", "-100%", "0%"], y: [0, -2, -2, 0, 0, 0], backgroundColor: isRtl ? ["#0a1020", "#0a1020", "#ffffff", "#dcfce7", "#dcfce7", "#0a1020"] : ["#ffffff", "#ffffff", "#ffffff", "#dcfce7", "#dcfce7", "#ffffff"] }; const endIsLeft = isRtl; return <div className="group/road flex h-full min-h-[13rem] flex-col rounded-[1.55rem] bg-white/92 p-3.5 shadow-[0_18px_54px_rgba(10,16,32,0.09)] ring-1 ring-black/5 backdrop-blur-2xl"><div className="mb-3 flex shrink-0 items-start justify-between gap-3"><div><div className={cn("text-[10px] font-black uppercase tracking-[0.16em]", isOrange ? "text-[#e65a26]" : "text-[#0a1020]/46")}>{data.label}</div><div className="mt-1 text-sm font-black leading-tight text-[#0a1020]">{data.title}</div></div></div><div className="grid shrink-0 grid-cols-3 gap-2 text-center text-[10px] font-black text-[#0a1020]/50"><motion.div className="rounded-xl bg-[#f8f4ed] px-2 py-2" animate={endIsLeft ? { backgroundColor: ["#f8f4ed", "#f8f4ed", "#f8f4ed", "#dcfce7", "#dcfce7", "#f8f4ed"], color: ["rgba(10,16,32,0.5)", "rgba(10,16,32,0.5)", "rgba(10,16,32,0.5)", "#166534", "#166534", "rgba(10,16,32,0.5)"] } : {}} transition={transition}>{data.left}</motion.div><motion.div className="relative overflow-hidden rounded-xl bg-[#fff1e9] px-2 py-2 text-[#e65a26]" animate={{ scale: [1, 1.02, 1.02, 1, 1, 1] }} transition={transition}><span className="relative z-10">{data.mid}</span><motion.span className="absolute inset-y-0 left-0 w-1/2 bg-white/40" animate={{ x: ["-120%", "180%", "180%", "180%", "180%", "-120%"] }} transition={transition}/></motion.div><motion.div className="rounded-xl bg-[#f8f4ed] px-2 py-2" animate={!endIsLeft ? { backgroundColor: ["#f8f4ed", "#f8f4ed", "#f8f4ed", "#dcfce7", "#dcfce7", "#f8f4ed"], color: ["rgba(10,16,32,0.5)", "rgba(10,16,32,0.5)", "rgba(10,16,32,0.5)", "#166534", "#166534", "rgba(10,16,32,0.5)"] } : {}} transition={transition}>{data.right}</motion.div></div><div className="relative mt-2 min-h-[7.1rem] flex-1 overflow-visible"><div className="absolute inset-x-0 top-1/2 h-[7.1rem] -translate-y-1/2"><div className="absolute left-8 right-8 top-[2.25rem] h-3.5 rounded-full bg-[#ebe7df] ring-1 ring-black/5"/><div className="absolute left-12 right-12 top-[2.66rem] h-[2px] rounded-full bg-white/80"/><div className="absolute left-8 right-8 top-[2.25rem] h-3.5 overflow-hidden rounded-full"><motion.div className={cn("absolute inset-y-0 w-full rounded-full", isOrange ? "bg-[#e65a26]" : "bg-[#0a1020]", isRtl ? "right-0" : "left-0")} style={{ transformOrigin: isRtl ? "right center" : "left center" }} animate={{ scaleX: [0, 0.5, 0.5, 1, 1, 0] }} transition={transition}/></div><motion.div className={cn("absolute top-[1.56rem] z-10 h-9 w-9 rounded-full border-[5px] border-white shadow-md", endIsLeft ? "left-[0.875rem]" : "right-[0.875rem]")} animate={{ backgroundColor: ["#0a1020", "#0a1020", "#0a1020", "#16a34a", "#16a34a", "#0a1020"] }} transition={transition}/><div className={cn("absolute top-[1.56rem] h-9 w-9 rounded-full border-[5px] border-white bg-[#0a1020] shadow-md", endIsLeft ? "right-[0.875rem]" : "left-[0.875rem]")}/><motion.div className="absolute left-1/2 top-[1.31rem] z-10 flex h-11 w-11 -translate-x-1/2 items-center justify-center rounded-full border-[5px] border-white bg-[#e65a26] text-white shadow-md" animate={{ scale: [1, 1.18, 1.18, 1.05, 1, 1] }} transition={transition}><Handshake className="h-4 w-4"/></motion.div><motion.div className="absolute top-[0.62rem] z-30 flex h-16 w-16 items-center justify-center rounded-[1.35rem] ring-1 ring-black/8" animate={movingCardAnimation} transition={transition}>{!isRtl && <AnimatedBusIcon duration={duration} delay={delay} className="h-11 w-[3.8rem]"/>}{isRtl && <><motion.div className="absolute inset-0 flex items-center justify-center" animate={{ opacity: [1, 1, 0, 0, 0, 1] }} transition={iconSwitch}><Search className="h-8 w-8 text-[#f1a37f]"/></motion.div><motion.div className="absolute inset-0 flex items-center justify-center" animate={{ opacity: [0, 0, 1, 1, 1, 0] }} transition={iconSwitch}><div className="scale-x-[-1]"><AnimatedBusIcon duration={duration} delay={delay} className="h-11 w-[3.8rem]"/></div></motion.div></>}</motion.div><div className="absolute left-0 top-[5.6rem] w-28 text-left text-[10px] font-black leading-tight text-[#0a1020]/45">{data.from}</div><div className="absolute left-1/2 top-[5.6rem] -translate-x-1/2 text-center text-[10px] font-black leading-tight text-[#e65a26]">{data.center}</div><div className="absolute right-0 top-[5.6rem] w-28 text-right text-[10px] font-black leading-tight text-[#0a1020]/45">{data.to}</div></div></div></div>; }
+function ProcessRoad({ data, direction, color }) {
+  const isRtl = direction === "rtl";
+  const isOrange = color === "orange";
+  const pathRef = useRef(null);
+  const [pathWidth, setPathWidth] = useState(0);
+  const duration = 11.6;
+  const delay = isRtl ? 0.42 : 0;
+  const times = [0, 0.28, 0.52, 0.76, 0.9, 1];
+  const transition = { duration, times, repeat: Infinity, ease: "easeInOut", delay };
+  const iconSwitch = { duration, times: [0, 0.519, 0.52, 0.76, 0.9, 1], repeat: Infinity, ease: "linear", delay };
+
+  useEffect(() => {
+    const element = pathRef.current;
+    if (!element) return undefined;
+
+    const updateWidth = () => setPathWidth(element.getBoundingClientRect().width);
+    updateWidth();
+
+    if (typeof ResizeObserver !== "undefined") {
+      const observer = new ResizeObserver(updateWidth);
+      observer.observe(element);
+      return () => observer.disconnect();
+    }
+
+    window.addEventListener("resize", updateWidth);
+    return () => window.removeEventListener("resize", updateWidth);
+  }, []);
+
+  const cardSize = 64;
+  const safeWidth = Math.max(pathWidth, cardSize);
+  const startX = isRtl ? safeWidth - cardSize : 0;
+  const centerX = safeWidth / 2 - cardSize / 2;
+  const endX = isRtl ? 0 : safeWidth - cardSize;
+  const measured = pathWidth > cardSize;
+
+  const movingCardAnimation = {
+    // Stabilní pixelové pozice podle reálné šířky trasy. Tím se odstraní rozdíl canvas vs. Render.
+    x: [startX, centerX, centerX, endX, endX, startX],
+    y: [0, 0, 0, 0, 0, 0],
+    backgroundColor: isRtl
+      ? ["#0a1020", "#0a1020", "#ffffff", "#dcfce7", "#dcfce7", "#0a1020"]
+      : ["#ffffff", "#ffffff", "#ffffff", "#dcfce7", "#dcfce7", "#ffffff"],
+  };
+
+  const finalLabelAnimation = {
+    backgroundColor: ["#f8f4ed", "#f8f4ed", "#f8f4ed", "#dcfce7", "#dcfce7", "#f8f4ed"],
+    color: ["rgba(10,16,32,0.5)", "rgba(10,16,32,0.5)", "rgba(10,16,32,0.5)", "#166534", "#166534", "rgba(10,16,32,0.5)"],
+  };
+
+  const endIsLeft = isRtl;
+
+  return (
+    <div className="group/road flex h-full min-h-[13rem] flex-col rounded-[1.55rem] bg-white/92 p-3.5 shadow-[0_18px_54px_rgba(10,16,32,0.09)] ring-1 ring-black/5 backdrop-blur-2xl">
+      <div className="mb-3 flex shrink-0 items-start justify-between gap-3">
+        <div>
+          <div className={cn("text-[10px] font-black uppercase tracking-[0.16em]", isOrange ? "text-[#e65a26]" : "text-[#0a1020]/46")}>{data.label}</div>
+          <div className="mt-1 text-sm font-black leading-tight text-[#0a1020]">{data.title}</div>
+        </div>
+      </div>
+
+      <div className="grid shrink-0 grid-cols-3 gap-2 text-center text-[10px] font-black text-[#0a1020]/50">
+        <motion.div className="rounded-xl bg-[#f8f4ed] px-2 py-2" animate={endIsLeft ? finalLabelAnimation : {}} transition={transition}>{data.left}</motion.div>
+        <motion.div className="relative overflow-hidden rounded-xl bg-[#fff1e9] px-2 py-2 text-[#e65a26]" animate={{ scale: [1, 1.02, 1.02, 1, 1, 1] }} transition={transition}>
+          <span className="relative z-10">{data.mid}</span>
+          <motion.span className="absolute inset-y-0 left-0 w-1/2 bg-white/40" animate={{ x: ["-120%", "180%", "180%", "180%", "180%", "-120%"] }} transition={transition} />
+        </motion.div>
+        <motion.div className="rounded-xl bg-[#f8f4ed] px-2 py-2" animate={!endIsLeft ? finalLabelAnimation : {}} transition={transition}>{data.right}</motion.div>
+      </div>
+
+      <div className="relative mt-2 min-h-[7.1rem] flex-1 overflow-visible">
+        <div ref={pathRef} className="absolute inset-x-0 top-1/2 h-[7.1rem] -translate-y-1/2">
+          <div className="absolute left-8 right-8 top-[2.25rem] h-3.5 rounded-full bg-[#ebe7df] ring-1 ring-black/5" />
+          <div className="absolute left-12 right-12 top-[2.66rem] h-[2px] rounded-full bg-white/80" />
+          <div className="absolute left-8 right-8 top-[2.25rem] h-3.5 overflow-hidden rounded-full">
+            <motion.div
+              className={cn("absolute inset-y-0 w-full rounded-full", isOrange ? "bg-[#e65a26]" : "bg-[#0a1020]", isRtl ? "right-0" : "left-0")}
+              style={{ transformOrigin: isRtl ? "right center" : "left center" }}
+              animate={{ scaleX: [0, 0.5, 0.5, 1, 1, 0] }}
+              transition={transition}
+            />
+          </div>
+
+          <motion.div
+            className={cn("absolute top-[1.56rem] z-10 h-9 w-9 rounded-full border-[5px] border-white shadow-md", endIsLeft ? "left-[0.875rem]" : "right-[0.875rem]")}
+            animate={{ backgroundColor: ["#0a1020", "#0a1020", "#0a1020", "#16a34a", "#16a34a", "#0a1020"] }}
+            transition={transition}
+          />
+          <div className={cn("absolute top-[1.56rem] h-9 w-9 rounded-full border-[5px] border-white bg-[#0a1020] shadow-md", endIsLeft ? "right-[0.875rem]" : "left-[0.875rem]")} />
+          <motion.div
+            className="absolute left-1/2 top-[1.31rem] z-10 flex h-11 w-11 -translate-x-1/2 items-center justify-center rounded-full border-[5px] border-white bg-[#e65a26] text-white shadow-md"
+            animate={{ scale: [1, 1.18, 1.18, 1.05, 1, 1] }}
+            transition={transition}
+          >
+            <Handshake className="h-4 w-4" />
+          </motion.div>
+
+          <motion.div
+            key={`${isRtl ? "rtl" : "ltr"}-${Math.round(pathWidth)}`}
+            className="absolute left-0 top-[0.62rem] z-40 flex h-16 w-16 items-center justify-center rounded-[1.35rem] ring-1 ring-black/8"
+            style={{ opacity: measured ? 1 : 0 }}
+            initial={false}
+            animate={movingCardAnimation}
+            transition={transition}
+          >
+            {!isRtl && <AnimatedBusIcon duration={duration} delay={delay} className="h-11 w-[3.8rem]" />}
+            {isRtl && (
+              <>
+                <motion.div
+                  className="absolute inset-0 flex items-center justify-center"
+                  animate={{ opacity: [1, 1, 0, 0, 0, 1], scale: [1, 1, 0.92, 0.92, 0.92, 1] }}
+                  transition={iconSwitch}
+                >
+                  <Search className="h-8 w-8 text-[#f1a37f]" />
+                </motion.div>
+                <motion.div
+                  className="absolute inset-0 flex items-center justify-center"
+                  animate={{ opacity: [0, 0, 1, 1, 1, 0], scale: [0.96, 0.96, 1, 1, 1, 0.96] }}
+                  transition={iconSwitch}
+                >
+                  <div className="scale-x-[-1]"><AnimatedBusIcon duration={duration} delay={delay} className="h-11 w-[3.8rem]" /></div>
+                </motion.div>
+              </>
+            )}
+          </motion.div>
+
+          <div className="absolute left-0 top-[5.6rem] w-28 text-left text-[10px] font-black leading-tight text-[#0a1020]/45">{data.from}</div>
+          <div className="absolute left-1/2 top-[5.6rem] -translate-x-1/2 text-center text-[10px] font-black leading-tight text-[#e65a26]">{data.center}</div>
+          <div className="absolute right-0 top-[5.6rem] w-28 text-right text-[10px] font-black leading-tight text-[#0a1020]/45">{data.to}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MiniStatBadge({ value, label, icon: Icon, delay = 0 }) { const ref = useRef(null); const inView = useInView(ref, { once: true, margin: "-80px" }); const [display, setDisplay] = useState(0); useEffect(() => { if (!inView) return undefined; let frame; const duration = 950; const timeout = setTimeout(() => { const start = performance.now(); const tick = (now) => { const progress = Math.min((now - start) / duration, 1); const eased = 1 - Math.pow(1 - progress, 3); setDisplay(Math.round(value * eased)); if (progress < 1) frame = requestAnimationFrame(tick); }; frame = requestAnimationFrame(tick); }, delay * 1000); return () => { clearTimeout(timeout); if (frame) cancelAnimationFrame(frame); }; }, [inView, value, delay]); return <motion.div ref={ref} initial={{ opacity: 0, y: 10, scale: 0.98 }} whileInView={{ opacity: 1, y: 0, scale: 1 }} viewport={{ once: true, margin: "-80px" }} transition={{ duration: 0.42, delay }} whileHover={{ y: -3 }} className="group relative overflow-hidden rounded-[1.2rem] bg-white px-3 py-3 text-left shadow-[0_12px_34px_rgba(10,16,32,0.07)] ring-1 ring-black/5 transition hover:shadow-[0_18px_44px_rgba(10,16,32,0.11)]"><div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#e65a26] via-[#f1a37f] to-transparent opacity-80"/><div className="absolute -right-8 -top-8 h-20 w-20 rounded-full bg-[#e65a26]/8 blur-2xl transition group-hover:bg-[#e65a26]/14"/><div className="relative flex items-start justify-between gap-2"><div><div className="flex items-end gap-0.5"><span className="text-[1.72rem] font-black leading-none tracking-[-0.07em] text-[#0a1020]">{display}</span><span className="mb-0.5 text-base font-black text-[#e65a26]">+</span></div><div className="mt-1 max-w-[7rem] text-[9px] font-black uppercase leading-[1.15] tracking-[0.08em] text-[#0a1020]/44">{label}</div></div><div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#fff1e9] text-[#e65a26] ring-1 ring-[#e65a26]/10 transition group-hover:bg-[#e65a26] group-hover:text-white"><Icon className="h-4 w-4"/></div></div></motion.div>; }
 function AnimatedHeroPanel({ t }) { return <motion.div variants={fadeUp} className="relative h-full"><div className="absolute inset-0 rounded-[3rem] bg-[#0a1020]/10 blur-2xl"/><div className="relative flex h-full flex-col overflow-hidden rounded-[2.25rem] bg-white p-4 shadow-[0_24px_80px_rgba(10,16,32,0.12)] ring-1 ring-black/5 sm:p-5"><div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_18%,rgba(230,90,38,0.12),transparent_25%),radial-gradient(circle_at_84%_24%,rgba(37,99,235,0.10),transparent_28%),linear-gradient(180deg,#ffffff_0%,#f8fbff_58%,#fff7f1_100%)]"/><div className="absolute inset-0 opacity-[0.14] bg-[linear-gradient(rgba(10,16,32,0.10)_1px,transparent_1px),linear-gradient(90deg,rgba(10,16,32,0.10)_1px,transparent_1px)] bg-[size:36px_36px]"/><div className="relative z-20 flex h-full flex-col"><div className="mb-3 shrink-0"><div className="text-[10px] font-black uppercase tracking-[0.2em] text-[#e65a26]">{t.heroEyebrow}</div><div className="mt-1.5 text-xl font-black tracking-[-0.04em] text-[#0a1020]">{t.panelTitle}</div></div><div className="grid flex-1 grid-rows-2 gap-3"><ProcessRoad data={t.sellProcess} direction="ltr" color="orange"/><ProcessRoad data={t.buyProcess} direction="rtl" color="dark"/></div><div className="mt-3 grid shrink-0 grid-cols-3 gap-2 rounded-[1.45rem] bg-[#fffcf7]/80 p-2 ring-1 ring-black/5 backdrop-blur-xl"><MiniStatBadge value={26} label={t.stats[0]} icon={CalendarDays} delay={0}/><MiniStatBadge value={300} label={t.stats[1]} icon={Users} delay={0.12}/><MiniStatBadge value={500} label={t.stats[2]} icon={Bus} delay={0.24}/></div></div></div></motion.div>; }
 function MobileProcessPreview({ t, onOpenLead }) { return <motion.div variants={fadeUp} className="lg:hidden"><div className="rounded-[1.7rem] bg-white/92 p-4 shadow-[0_18px_60px_rgba(10,16,32,0.08)] ring-1 ring-black/5"><div className="flex items-center gap-3"><div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#0a1020] text-white"><Bus className="h-5 w-5"/></div><div><div className="text-xs font-black uppercase tracking-[0.18em] text-[#e65a26]">Autobusy.cz</div><div className="mt-1 text-sm font-black text-[#0a1020]">{t.panelTitle}</div></div></div><div className="mt-4 grid grid-cols-2 gap-2"><button type="button" onClick={() => onOpenLead("sell")} className="rounded-2xl bg-[#0a1020] px-4 py-3 text-center text-xs font-black text-white">{t.sellCta}</button><button type="button" onClick={() => onOpenLead("buy")} className="rounded-2xl bg-[#e65a26] px-4 py-3 text-center text-xs font-black text-white">{t.buyCta}</button></div></div></motion.div>; }
