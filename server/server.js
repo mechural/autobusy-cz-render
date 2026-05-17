@@ -1,85 +1,67 @@
 import express from "express";
 import cors from "cors";
 import nodemailer from "nodemailer";
-import path from "path";
+import dotenv from "dotenv";
 import fs from "fs";
+import path from "path";
 import { fileURLToPath } from "url";
 
+dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const rootDir = path.resolve(__dirname, "..");
-const dataDir = path.join(rootDir, "data");
-const dbPath = path.join(dataDir, "submissions.json");
-const distDir = path.join(rootDir, "dist");
+const root = path.join(__dirname, "..");
+const dataDir = path.join(root, "data");
+const submissionsPath = path.join(dataDir, "submissions.json");
+const app = express();
 const PORT = process.env.PORT || 10000;
 
 fs.mkdirSync(dataDir, { recursive: true });
+if (!fs.existsSync(submissionsPath)) fs.writeFileSync(submissionsPath, "[]", "utf8");
 
-function readDb() {
-  if (!fs.existsSync(dbPath)) fs.writeFileSync(dbPath, JSON.stringify({ leads: [], newsletter: [] }, null, 2), "utf8");
-  return JSON.parse(fs.readFileSync(dbPath, "utf8"));
+app.use(cors());
+app.use(express.json({ limit: "2mb" }));
+app.use(express.static(path.join(root, "dist")));
+
+function saveSubmission(type, payload) {
+  const current = JSON.parse(fs.readFileSync(submissionsPath, "utf8") || "[]");
+  const record = { id: Date.now(), type, ...payload, receivedAt: new Date().toISOString() };
+  current.unshift(record);
+  fs.writeFileSync(submissionsPath, JSON.stringify(current, null, 2), "utf8");
+  return record;
 }
 
-function writeDb(db) {
-  fs.writeFileSync(dbPath, JSON.stringify(db, null, 2), "utf8");
-}
-
-function makeTransporter() {
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) return null;
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT || 587),
-    secure: String(process.env.SMTP_SECURE || "false") === "true",
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+async function sendMail(subject, payload) {
+  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, MAIL_TO } = process.env;
+  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) return { skipped: true };
+  const transporter = nodemailer.createTransport({
+    host: SMTP_HOST,
+    port: Number(SMTP_PORT || 587),
+    secure: Number(SMTP_PORT) === 465,
+    auth: { user: SMTP_USER, pass: SMTP_PASS },
   });
-}
-
-async function notify(subject, payload) {
-  const transporter = makeTransporter();
-  if (!transporter) return { sent: false, reason: "SMTP není nastavené" };
-  await transporter.sendMail({
-    from: process.env.MAIL_FROM || process.env.SMTP_USER,
-    to: process.env.MAIL_TO || "sikola@ck-kobra.cz",
-    subject,
-    text: Object.entries(payload).map(([key, value]) => `${key}: ${value}`).join("\n"),
-  });
+  const text = Object.entries(payload).map(([key, value]) => `${key}: ${value}`).join("\n");
+  await transporter.sendMail({ from: SMTP_USER, to: MAIL_TO || "sikola@ck-kobra.cz", subject, text });
   return { sent: true };
 }
 
-const app = express();
-app.use(cors());
-app.use(express.json({ limit: "4mb" }));
-
-app.get("/api/health", (_req, res) => res.json({ ok: true }));
-
 app.post("/api/leads", async (req, res) => {
-  const payload = { ...req.body, receivedAt: new Date().toISOString() };
-  const db = readDb();
-  db.leads.unshift(payload);
-  writeDb(db);
-  let mail = { sent: false };
-  try { mail = await notify(`Autobusy.cz – ${payload.type || "nová poptávka"}`, payload); } catch (error) { mail = { sent: false, error: error.message }; }
-  res.status(201).json({ ok: true, mail });
+  const record = saveSubmission("lead", req.body);
+  try { await sendMail(`Autobusy.cz – ${req.body.type || "nová poptávka"}`, record); } catch (error) { console.error(error); }
+  res.json({ ok: true, record });
 });
 
 app.post("/api/newsletter", async (req, res) => {
-  const payload = { ...req.body, receivedAt: new Date().toISOString() };
-  const db = readDb();
-  db.newsletter.unshift(payload);
-  writeDb(db);
-  let mail = { sent: false };
-  try { mail = await notify("Autobusy.cz – nový odběr nabídek", payload); } catch (error) { mail = { sent: false, error: error.message }; }
-  res.status(201).json({ ok: true, mail });
+  const record = saveSubmission("newsletter", req.body);
+  try { await sendMail("Autobusy.cz – nový odběr newsletteru", record); } catch (error) { console.error(error); }
+  res.json({ ok: true, record });
 });
 
-app.get("/api/admin/submissions", (_req, res) => res.json(readDb()));
+app.get("/api/submissions", (_req, res) => {
+  res.json(JSON.parse(fs.readFileSync(submissionsPath, "utf8") || "[]"));
+});
 
-if (fs.existsSync(distDir)) {
-  app.use(express.static(distDir));
-  app.get("*", (req, res) => {
-    if (req.path.startsWith("/api/")) return res.status(404).json({ error: "API endpoint nenalezen." });
-    res.sendFile(path.join(distDir, "index.html"));
-  });
-}
+app.get("*", (_req, res) => {
+  res.sendFile(path.join(root, "dist", "index.html"));
+});
 
 app.listen(PORT, () => console.log(`Autobusy.cz běží na portu ${PORT}`));
