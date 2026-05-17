@@ -316,7 +316,265 @@ function NewsletterSignup({ t, onFormSubmit = () => {} }) { const [status, setSt
 function LeadForm({ t, onFormSubmit = () => {} }) { const [leadType, setLeadType] = useState("sell"); const [status, setStatus] = useState("idle"); const [pending, setPending] = useState(false); const [fallbackMailto, setFallbackMailto] = useState(""); useEffect(() => { const handleOpenLead = (event) => { const type = event.detail?.type === "buy" ? "buy" : "sell"; setLeadType(type); setStatus("idle"); }; window.addEventListener("autobusy-open-lead", handleOpenLead); return () => window.removeEventListener("autobusy-open-lead", handleOpenLead); }, []); const isSell = leadType === "sell"; const f = t.form; const submitLead = async (event) => { event.preventDefault(); setPending(true); setStatus("idle"); setFallbackMailto(""); const payload = Object.fromEntries(new FormData(event.currentTarget).entries()); payload.type = isSell ? "Prodej autobusu" : "Poptávka koupě"; payload.source = "Autobusy.cz"; payload.createdAt = new Date().toISOString(); payload.createdAtDisplay = new Date().toLocaleString("cs-CZ"); try { const response = await fetch("/api/leads", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }); if (!response.ok) throw new Error("Formulář se nepodařilo odeslat."); onFormSubmit({ ...payload, deliveryStatus: "odesláno backendem", category: "lead" }); setStatus("success"); event.currentTarget.reset(); } catch { const subject = encodeURIComponent(`Autobusy.cz – ${payload.type}`); const body = encodeURIComponent(Object.entries(payload).map(([key, value]) => `${key}: ${value}`).join(String.fromCharCode(10))); setFallbackMailto(`mailto:${CONTACT.email}?subject=${subject}&body=${body}`); onFormSubmit({ ...payload, deliveryStatus: "fallback e-mail", category: "lead" }); setStatus("mailFallback"); } finally { setPending(false); } }; const inputClass = "w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm font-bold outline-none transition focus:border-[#e65a26] focus:ring-4 focus:ring-[#e65a26]/10"; const hintClass = "mt-1 text-xs font-bold text-[#0a1020]/38"; return <form onSubmit={submitLead} className="rounded-[1.8rem] bg-white p-5 shadow-sm ring-1 ring-black/10 sm:p-6"><div className="mb-5 grid grid-cols-2 rounded-full bg-[#f4efe7] p-1"><button type="button" onClick={() => setLeadType("sell")} className={cn("rounded-full px-4 py-3 text-sm font-black transition", isSell ? "bg-[#0a1020] text-white" : "text-[#0a1020]/55")}>{t.sellCta}</button><button type="button" onClick={() => setLeadType("buy")} className={cn("rounded-full px-4 py-3 text-sm font-black transition", !isSell ? "bg-[#0a1020] text-white" : "text-[#0a1020]/55")}>{t.buyCta}</button></div><div className="grid gap-4"><div className="grid gap-4 sm:grid-cols-2"><div><input required name="name" autoComplete="name" className={inputClass} placeholder={f.name}/><div className={hintClass}>{f.nameHint}</div></div><div><input required name="phone" type="tel" autoComplete="tel" className={inputClass} placeholder={f.phone}/><div className={hintClass}>{f.phoneHint}</div></div></div><div><input required name="email" type="email" autoComplete="email" className={inputClass} placeholder={f.email}/><div className={hintClass}>{f.emailHint}</div></div>{isSell ? <><div className="grid gap-4 sm:grid-cols-2"><div><input required name="sellModel" className={inputClass} placeholder={f.sellModel}/><div className={hintClass}>{f.sellModelHint}</div></div><div><input name="year" className={inputClass} placeholder={f.year}/><div className={hintClass}>{f.yearHint}</div></div></div><div className="grid gap-4 sm:grid-cols-3"><div><input name="mileage" className={inputClass} placeholder={f.mileage}/><div className={hintClass}>{f.mileageHint}</div></div><div><input name="seats" className={inputClass} placeholder={f.seats}/><div className={hintClass}>{f.seatsHint}</div></div><div><input name="price" className={inputClass} placeholder={f.price}/><div className={hintClass}>{f.priceHint}</div></div></div><div><textarea name="note" className={cn(inputClass, "min-h-32 resize-none")} placeholder={f.sellNote}/><div className={hintClass}>{f.sellNoteHint}</div></div></> : <><div className="grid gap-4 sm:grid-cols-2"><div><input required name="buyType" className={inputClass} placeholder={f.buyType}/><div className={hintClass}>{f.buyTypeHint}</div></div><div><input name="seatsWanted" className={inputClass} placeholder={f.seats}/><div className={hintClass}>{f.seatsHint}</div></div></div><div className="grid gap-4 sm:grid-cols-3"><div><input name="budget" className={inputClass} placeholder={f.budget}/><div className={hintClass}>{f.budgetHint}</div></div><div><input name="emissionRequest" className={inputClass} placeholder={f.emission}/><div className={hintClass}>{f.emissionHint}</div></div><div><input name="term" className={inputClass} placeholder={f.term}/><div className={hintClass}>{f.termHint}</div></div></div><div><textarea name="buyNote" className={cn(inputClass, "min-h-32 resize-none")} placeholder={f.buyNote}/><div className={hintClass}>{f.buyNoteHint}</div></div></>}<label className="flex items-start gap-3 text-xs font-bold leading-5 text-[#0a1020]/55"><input required name="consent" value="ano" type="checkbox" className="mt-1 h-4 w-4 rounded border-black/20 text-[#e65a26] focus:ring-[#e65a26]"/><span>{f.consent}</span></label>{status === "success" && <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{t.leadSuccess} {CONTACT.phone}<SuccessActions compact t={t}/></div>}{status === "mailFallback" && <div className="rounded-2xl bg-orange-50 px-4 py-3 text-sm font-bold text-orange-700">{t.leadFallback}{fallbackMailto && <a href={fallbackMailto} className="mt-3 inline-flex items-center justify-center rounded-full bg-[#0a1020] px-4 py-2.5 text-xs font-black text-white transition hover:bg-black">{t.openEmail}</a>}</div>}<button type="submit" disabled={pending} className="inline-flex items-center justify-center gap-2 rounded-full bg-[#e65a26] px-6 py-4 text-sm font-black text-white shadow-[0_18px_45px_rgba(230,90,38,0.24)] transition hover:bg-[#ce4e20] disabled:cursor-not-allowed disabled:opacity-60">{pending ? t.submitting : isSell ? f.submitSell : f.submitBuy} <ArrowRight className="h-4 w-4"/></button></div></form>; }
 function Contact({ t, onFormSubmit = () => {} }) { return <section id="kontakt" className="scroll-mt-28 bg-white py-20 lg:py-24"><div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"><div className="grid gap-8 rounded-[2.4rem] bg-[#0a1020] p-5 text-white shadow-[0_34px_110px_rgba(10,16,32,0.18)] lg:grid-cols-[0.85fr_1.15fr] lg:p-8"><div className="p-4 sm:p-6"><div className="text-xs font-black uppercase tracking-[0.26em] text-[#f1a37f]">{t.contactEyebrow}</div><h2 className="mt-4 text-4xl font-black tracking-[-0.055em] sm:text-6xl">{t.contactTitle}</h2><p className="mt-5 text-lg font-semibold leading-8 text-white/58">{t.contactText}</p><div className="mt-6 rounded-2xl bg-white/8 px-5 py-4 text-lg font-black tracking-[-0.02em] text-white ring-1 ring-white/10">{CONTACT.company}</div><div className="mt-6 grid gap-4 font-bold text-white/72"><a href={CONTACT.phoneHref} className="group flex items-center gap-4 rounded-2xl bg-white/8 p-5 ring-1 ring-white/10 transition hover:bg-white/12"><span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-[#f1a37f] transition group-hover:bg-[#e65a26] group-hover:text-white"><Phone className="h-6 w-6"/></span><span className="text-2xl font-black tracking-[-0.035em] text-white sm:text-3xl">{CONTACT.phone}</span></a><a href={`mailto:${CONTACT.email}`} className="group flex items-center gap-4 rounded-2xl bg-white/8 p-5 ring-1 ring-white/10 transition hover:bg-white/12"><span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-[#f1a37f] transition group-hover:bg-[#e65a26] group-hover:text-white"><Mail className="h-6 w-6"/></span><span className="text-xl font-black tracking-[-0.03em] text-white sm:text-2xl">{CONTACT.email}</span></a><a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className="group flex items-center gap-4 rounded-2xl bg-[#25D366]/12 p-5 ring-1 ring-[#25D366]/25 transition hover:bg-[#25D366]"><span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#25D366] text-white transition group-hover:bg-white group-hover:text-[#25D366]"><MessageCircle className="h-6 w-6"/></span><span className="text-xl font-black tracking-[-0.03em] text-white sm:text-2xl">WhatsApp</span></a></div></div><LeadForm t={t} onFormSubmit={onFormSubmit}/></div></div></section>; }
 function LegalModal({ type, onClose, t = COPY.cs }) { useEffect(() => { if (!type) return undefined; const onKeyDown = (event) => { if (event.key === "Escape") onClose(); }; document.addEventListener("keydown", onKeyDown); return () => document.removeEventListener("keydown", onKeyDown); }, [type, onClose]); if (!type) return null; const content = t.legalContent?.[type] || LEGAL_CONTENT[type] || LEGAL_CONTENT.terms; const legalLabels = t.legalLabels || {}; return <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[90] flex items-end justify-center bg-[#0a1020]/62 p-3 backdrop-blur-sm sm:items-center sm:p-6" onClick={onClose}><motion.div initial={{ opacity: 0, y: 24, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.24 }} className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-[2rem] bg-white p-6 shadow-[0_40px_140px_rgba(0,0,0,0.35)] sm:p-8" onClick={(event) => event.stopPropagation()}><div className="flex items-start justify-between gap-5"><div><div className="text-xs font-black uppercase tracking-[0.26em] text-[#e65a26]">Autobusy.cz</div><h2 className="mt-3 text-3xl font-black tracking-[-0.05em] text-[#0a1020] sm:text-5xl">{content.title}</h2></div><button type="button" onClick={onClose} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#f4efe7] text-[#0a1020] transition hover:bg-[#eee7dc]" aria-label={legalLabels.close || "Zavřít"}><X className="h-5 w-5"/></button></div><div className="mt-7 grid gap-4 text-sm font-semibold leading-7 text-[#0a1020]/62">{content.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}</div>{content.operator && <div className="mt-7 rounded-[1.4rem] bg-[#fffcf7] p-5 text-sm font-bold leading-7 text-[#0a1020]/62 ring-1 ring-black/5"><div className="font-black text-[#0a1020]">{legalLabels.operator || "Správce osobních údajů"}</div><div>{CONTACT.company}</div><div>{legalLabels.seat || "Sídlo"}: {CONTACT.street}, {CONTACT.city}</div><div>IČO: {CONTACT.ico}</div><div>{legalLabels.email || "E-mail"}: <a href={`mailto:${CONTACT.email}`} className="text-[#e65a26] underline-offset-4 hover:underline">{CONTACT.email}</a></div></div>}</motion.div></motion.div>; }
-function Footer({ t, onAdminOpen, onLegalOpen }) { const [showOperatorInfo, setShowOperatorInfo] = useState(false); const operatorRef = useRef(null); const goTop = (event) => { event.preventDefault(); document.getElementById("top")?.scrollIntoView({ behavior: "smooth", block: "start" }); }; return <footer className="bg-[#fffcf7] py-10"><div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"><div className="grid gap-8 border-t border-black/10 pt-8 sm:grid-cols-2 lg:grid-cols-4"><div><a href="#top" onClick={goTop} aria-label="Autobusy.cz - zpět nahoru"><Logo/></a><p className="mt-4 text-sm font-semibold leading-6 text-[#0a1020]/52">{t.footerText}</p></div><div><div className="text-sm font-black uppercase tracking-[0.12em] text-[#0a1020]/72">Menu</div><div className="mt-4 grid gap-2"><a href="#nabidka" className="text-sm font-semibold text-[#0a1020]/52">{t.nav[0]}</a><a href="#jak-to-funguje" className="text-sm font-semibold text-[#0a1020]/52">{t.brokerageNav}</a><a href="#odber" className="text-sm font-semibold text-[#0a1020]/52">{t.nav[1]}</a><a href="#kontakt" className="text-sm font-semibold text-[#0a1020]/52">{t.nav[3]}</a></div></div><div><div className="text-sm font-black uppercase tracking-[0.12em] text-[#0a1020]/72">{(t.legalLabels || {}).legalInfo || "Právní informace"}</div><div className="mt-4 grid gap-2"><button type="button" onClick={() => onLegalOpen("terms")} className="text-left text-sm font-semibold text-[#0a1020]/52 underline-offset-4 hover:underline">{(t.legalLinks || LEGAL_LINKS).terms}</button><button type="button" onClick={() => onLegalOpen("privacy")} className="text-left text-sm font-semibold text-[#0a1020]/52 underline-offset-4 hover:underline">{(t.legalLinks || LEGAL_LINKS).privacy}</button><button type="button" onClick={() => onLegalOpen("cookies")} className="text-left text-sm font-semibold text-[#0a1020]/52 underline-offset-4 hover:underline">{(t.legalLinks || LEGAL_LINKS).cookies}</button><button type="button" onClick={() => setShowOperatorInfo(true)} className="text-left text-sm font-semibold text-[#0a1020]/52 underline-offset-4 hover:underline">{t.nav[3]}</button></div></div><div><div className="text-sm font-black uppercase tracking-[0.12em] text-[#0a1020]/72">{t.nav[3]}</div><div className="mt-4 grid gap-2"><span className="text-sm font-semibold text-[#0a1020]/52">{CONTACT.company}</span><a href={CONTACT.phoneHref} className="text-sm font-semibold text-[#0a1020]/52">{CONTACT.phone}</a><a href={WHATSAPP_LINK} className="text-sm font-semibold text-[#0a1020]/52">WhatsApp</a><a href={`mailto:${CONTACT.email}`} className="text-sm font-semibold text-[#0a1020]/52">{CONTACT.email}</a></div></div></div>{showOperatorInfo && <motion.div ref={operatorRef} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mt-8 rounded-[1.4rem] bg-white/70 p-5 text-xs font-bold leading-6 text-[#0a1020]/48 ring-1 ring-black/5"><div className="font-black text-[#0a1020]/62">Provozovatel webu</div><div>{CONTACT.company}</div><div>{legalLabels.seat || "Sídlo"}: {CONTACT.street}, {CONTACT.city}</div><div>IČO: {CONTACT.ico}</div><div>DIČ: {CONTACT.dic}</div><div>E-mail: <a href={`mailto:${CONTACT.email}`} className="text-[#0a1020]/60 underline-offset-4 hover:underline">{CONTACT.email}</a></div><div>Telefon: <a href={CONTACT.phoneHref} className="text-[#0a1020]/60 underline-offset-4 hover:underline">{CONTACT.phone}</a></div></motion.div>}<div className="mt-6 flex flex-col gap-3 border-t border-black/10 pt-6 text-xs font-bold text-[#0a1020]/40 sm:flex-row sm:items-center sm:justify-between"><div>© 2026 Autobusy.cz</div><a href="/admin" onClick={(event) => { event.preventDefault(); onAdminOpen(); }} className="text-[#0a1020]/40 transition hover:text-[#0a1020]">Admin</a></div><p className="mt-6 border-t border-black/10 pt-5 text-[11px] font-bold leading-5 text-[#0a1020]/38">{t.footerLegalNotice || "Provozovatel webu zajišťuje pouze zprostředkování kontaktu mezi prodávajícím a zájemcem o koupi vozidla. Vozidla uvedená v nabídce nejsou ve vlastnictví provozovatele webu, pokud není u konkrétní nabídky výslovně uvedeno jinak."}</p></div></footer>; }
+function Footer({ t, onAdminOpen, onLegalOpen }) {
+  const [showOperatorInfo, setShowOperatorInfo] = useState(false);
+  const operatorRef = useRef(null);
+  const legalLinks = t.legalLinks || LEGAL_LINKS;
+  const legalLabels = t.legalLabels || COPY.cs.legalLabels;
+
+  const goTop = (event) => {
+    event.preventDefault();
+    document.getElementById("top")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const scrollToSection = (event, id, options = {}) => {
+    event?.preventDefault?.();
+    if (options.showOperator) setShowOperatorInfo(true);
+    const target = document.getElementById(id);
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+      window.history.replaceState({}, "", `#${id}`);
+    }
+  };
+
+  const showContactInfo = (event) => {
+    event?.preventDefault?.();
+    setShowOperatorInfo(true);
+    window.setTimeout(() => operatorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 80);
+  };
+
+  useEffect(() => {
+    const handleShowFooterContact = () => setShowOperatorInfo(true);
+    window.addEventListener("autobusy-show-footer-contact", handleShowFooterContact);
+    return () => window.removeEventListener("autobusy-show-footer-contact", handleShowFooterContact);
+  }, []);
+
+  const footerTitleClass = "text-sm font-black uppercase tracking-[0.12em] text-[#0a1020]/72";
+  const footerTextClass = "text-sm font-semibold leading-6 text-[#0a1020]/52 transition hover:text-[#0a1020]";
+  const footerGridClass = "mt-4 grid gap-2";
+  const legalButtonClass = cn("text-left underline-offset-4 hover:underline", footerTextClass);
+
+  return (
+    <footer className="bg-[#fffcf7] py-10">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="grid gap-8 border-t border-black/10 pt-8 sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <a href="#top" onClick={goTop} aria-label="Autobusy.cz - zpět nahoru"><Logo /></a>
+            <p className="mt-4 text-sm font-semibold leading-6 text-[#0a1020]/52">{t.footerText}</p>
+          </div>
+          <div>
+            <div className={footerTitleClass}>{legalLabels.menu || "Menu"}</div>
+            <div className={footerGridClass}>
+              <a href="#nabidka" onClick={(event) => scrollToSection(event, "nabidka")} className={footerTextClass}>{t.nav[0]}</a>
+              <a href="#jak-to-funguje" onClick={(event) => scrollToSection(event, "jak-to-funguje")} className={footerTextClass}>{t.brokerageNav}</a>
+              <a href="#odber" onClick={(event) => scrollToSection(event, "odber")} className={footerTextClass}>{t.nav[1]}</a>
+              <a href="#kontakt" onClick={(event) => scrollToSection(event, "kontakt", { showOperator: true })} className={footerTextClass}>{t.nav[3]}</a>
+            </div>
+          </div>
+          <div>
+            <div className={footerTitleClass}>{legalLabels.legalInfo || "Právní informace"}</div>
+            <div className={footerGridClass}>
+              <button type="button" onClick={() => onLegalOpen("terms")} className={legalButtonClass}>{legalLinks.terms}</button>
+              <button type="button" onClick={() => onLegalOpen("privacy")} className={legalButtonClass}>{legalLinks.privacy}</button>
+              <button type="button" onClick={() => onLegalOpen("cookies")} className={legalButtonClass}>{legalLinks.cookies}</button>
+              <button type="button" onClick={showContactInfo} className={legalButtonClass}>{t.nav[3]}</button>
+            </div>
+          </div>
+          <div>
+            <div className={footerTitleClass}>{t.nav[3]}</div>
+            <div className={footerGridClass}>
+              <span className={footerTextClass}>{t.contactCompany || CONTACT.company}</span>
+              <a href={CONTACT.phoneHref} className={footerTextClass}>{CONTACT.phone}</a>
+              <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className={footerTextClass}>WhatsApp</a>
+              <a href={`mailto:${CONTACT.email}`} className={footerTextClass}>{CONTACT.email}</a>
+            </div>
+          </div>
+        </div>
+
+        {showOperatorInfo && (
+          <motion.div
+            ref={operatorRef}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-8 rounded-[1.4rem] bg-white/70 p-5 text-xs font-bold leading-6 text-[#0a1020]/48 ring-1 ring-black/5"
+          >
+            <div className="font-black text-[#0a1020]/62">{legalLabels.operator || "Provozovatel webu"}</div>
+            <div>{CONTACT.company}</div>
+            <div>{legalLabels.seat || "Sídlo"}: {CONTACT.street}, {CONTACT.city}</div>
+            <div>IČO: {CONTACT.ico}</div>
+            <div>DIČ: {CONTACT.dic}</div>
+            <div>{legalLabels.registeredIn || "Zapsáno v"}: {legalLabels.registeredValue || "obchodní rejstřík / živnostenský rejstřík"}</div>
+            <div>{legalLabels.email || "E-mail"}: <a href={`mailto:${CONTACT.email}`} className="text-[#0a1020]/60 underline-offset-4 hover:underline">{CONTACT.email}</a></div>
+            <div>{legalLabels.phone || "Telefon"}: <a href={CONTACT.phoneHref} className="text-[#0a1020]/60 underline-offset-4 hover:underline">{CONTACT.phone}</a></div>
+          </motion.div>
+        )}
+
+        <div className="mt-6 flex flex-col gap-3 border-t border-black/10 pt-6 text-xs font-bold text-[#0a1020]/40 sm:flex-row sm:items-center sm:justify-between">
+          <div>© 2026 Autobusy.cz</div>
+          <a href="/admin" onClick={(event) => { event.preventDefault(); onAdminOpen(); }} className="text-[#0a1020]/40 transition hover:text-[#0a1020]">Admin</a>
+        </div>
+
+        <p className="mt-6 border-t border-black/10 pt-5 text-[11px] font-bold leading-5 text-[#0a1020]/38">
+          {t.footerLegalNotice || "Provozovatel webu zajišťuje pouze zprostředkování kontaktu mezi prodávajícím a zájemcem o koupi vozidla. Vozidla uvedená v nabídce nejsou ve vlastnictví provozovatele webu, pokud není u konkrétní nabídky výslovně uvedeno jinak. Kupní smlouva je uzavírána přímo mezi prodávajícím a kupujícím."}
+        </p>
+      </div>
+    </footer>
+  );
+}
+
 function AdminPanel({ onBack, listings = vehicles, onListingsChange = () => {}, contactsData = [], formSubmissions = [] }) { const [login, setLogin] = useState({ username: "admin", password: "" }); const [loggedIn, setLoggedIn] = useState(false); const [items, setItems] = useState(listings); const [tab, setTab] = useState("listings"); const [message, setMessage] = useState(""); const [form, setForm] = useState({ title: "", brand: "", model: "", type: "Zájezdový", year: "", mileage: "", seats: "", price: "", location: "", image: "", description: "" }); const save = (event) => { event.preventDefault(); const vehicle = { id: Date.now(), title: form.title || [form.brand, form.model].filter(Boolean).join(" ") || "Nový autobus", subtitle: `${form.type} • doplněno z administrace`, brand: form.brand, model: form.model, type: form.type, year: form.year || "neuvedeno", yearNumber: Number(form.year) || 0, mileage: form.mileage || "neuvedeno", seats: form.seats ? `${form.seats} míst` : "neuvedeno", seatsNumber: Number(form.seats) || 0, price: form.price || "Cena na dotaz", priceNumber: Number(String(form.price).replace(/[^0-9]/g, "")) || 0, location: form.location || "Na dotaz", image: form.image || "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=1200&q=82", description: form.description || "Popis bude doplněn.", equipment: ["výbava bude doplněna"], status: "published", visible: true }; const next = [vehicle, ...items]; setItems(next); onListingsChange(next); setForm({ title: "", brand: "", model: "", type: "Zájezdový", year: "", mileage: "", seats: "", price: "", location: "", image: "", description: "" }); setMessage("Inzerát byl uložen v prototypu."); }; const field = "w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm font-bold outline-none transition focus:border-[#e65a26] focus:ring-4 focus:ring-[#e65a26]/10"; if (!loggedIn) return <main className="min-h-screen bg-[#fffcf7] px-4 py-8 text-[#0a1020]"><div className="mx-auto max-w-xl rounded-[2.4rem] bg-white p-6 shadow-[0_24px_80px_rgba(10,16,32,0.10)] ring-1 ring-black/5 sm:p-8"><Logo/><div className="mt-6 text-xs font-black uppercase tracking-[0.26em] text-[#e65a26]">Administrace</div><h1 className="mt-4 text-4xl font-black tracking-[-0.06em]">Přihlášení</h1><form onSubmit={(e) => { e.preventDefault(); if (login.username === ADMIN_LOGIN.username && login.password === ADMIN_LOGIN.password) setLoggedIn(true); else setMessage("Nesprávné přihlašovací údaje."); }} className="mt-7 grid gap-4"><input className={field} placeholder="Přihlašovací jméno" value={login.username} onChange={(e) => setLogin((v) => ({ ...v, username: e.target.value }))}/><input className={field} placeholder="Heslo" type="password" value={login.password} onChange={(e) => setLogin((v) => ({ ...v, password: e.target.value }))}/>{message && <div className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{message}</div>}<button className="rounded-full bg-[#e65a26] px-6 py-4 text-sm font-black text-white">Přihlásit</button></form><button onClick={onBack} className="mt-4 rounded-full bg-[#0a1020] px-5 py-3 text-sm font-black text-white">Zpět na web</button></div></main>; return <main className="min-h-screen bg-[#fffcf7] px-4 py-8 text-[#0a1020]"><div className="mx-auto max-w-7xl"><div className="mb-8 flex flex-col gap-4 rounded-[2rem] bg-white p-5 shadow-[0_18px_60px_rgba(10,16,32,0.08)] ring-1 ring-black/5 sm:flex-row sm:items-center sm:justify-between"><Logo/><div className="flex flex-wrap gap-3"><button type="button" onClick={onBack} className="rounded-full bg-[#0a1020] px-5 py-3 text-sm font-black text-white">Zpět na web</button><button type="button" onClick={() => setLoggedIn(false)} className="rounded-full bg-[#f4efe7] px-5 py-3 text-sm font-black text-[#0a1020]/70">Odhlásit</button></div></div><div className="mb-6 flex flex-wrap gap-2 rounded-[1.6rem] bg-white p-2 shadow-sm ring-1 ring-black/5">{[["listings", "Inzeráty"], ["contacts", "Kontakty"], ["forms", "Vyplněné formuláře"], ["security", "Heslo"]].map(([key, label]) => <button key={key} type="button" onClick={() => setTab(key)} className={cn("rounded-full px-5 py-3 text-sm font-black transition", tab === key ? "bg-[#0a1020] text-white" : "text-[#0a1020]/55 hover:bg-black/[0.04]")}>{label}</button>)}</div>{tab === "listings" && <div className="grid gap-6 xl:grid-cols-[1fr_1fr]"><section className="rounded-[2.4rem] bg-white p-5 shadow-[0_24px_80px_rgba(10,16,32,0.08)] ring-1 ring-black/5 sm:p-8"><div className="text-xs font-black uppercase tracking-[0.26em] text-[#e65a26]">Nový inzerát</div><h2 className="mt-3 text-3xl font-black tracking-[-0.05em]">Přidat autobus</h2><form onSubmit={save} className="mt-6 grid gap-4"><input className={field} placeholder="Název inzerátu" value={form.title} onChange={(e) => setForm((v) => ({ ...v, title: e.target.value }))}/><div className="grid gap-4 md:grid-cols-2"><input className={field} placeholder="Značka" value={form.brand} onChange={(e) => setForm((v) => ({ ...v, brand: e.target.value }))}/><input className={field} placeholder="Model" value={form.model} onChange={(e) => setForm((v) => ({ ...v, model: e.target.value }))}/><input className={field} placeholder="Typ" value={form.type} onChange={(e) => setForm((v) => ({ ...v, type: e.target.value }))}/><input className={field} placeholder="Rok" value={form.year} onChange={(e) => setForm((v) => ({ ...v, year: e.target.value }))}/><input className={field} placeholder="Nájezd" value={form.mileage} onChange={(e) => setForm((v) => ({ ...v, mileage: e.target.value }))}/><input className={field} placeholder="Počet míst" value={form.seats} onChange={(e) => setForm((v) => ({ ...v, seats: e.target.value }))}/><input className={field} placeholder="Cena" value={form.price} onChange={(e) => setForm((v) => ({ ...v, price: e.target.value }))}/><input className={field} placeholder="Lokalita" value={form.location} onChange={(e) => setForm((v) => ({ ...v, location: e.target.value }))}/></div><input className={field} placeholder="URL fotografie" value={form.image} onChange={(e) => setForm((v) => ({ ...v, image: e.target.value }))}/><textarea className={cn(field, "min-h-28")} placeholder="Popis" value={form.description} onChange={(e) => setForm((v) => ({ ...v, description: e.target.value }))}/>{message && <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{message}</div>}<button className="rounded-full bg-[#e65a26] px-6 py-4 text-sm font-black text-white">Přidat inzerát</button></form></section><section className="rounded-[2.4rem] bg-white p-5 shadow-[0_24px_80px_rgba(10,16,32,0.08)] ring-1 ring-black/5 sm:p-8"><div className="text-xs font-black uppercase tracking-[0.26em] text-[#e65a26]">Správa nabídky</div><h2 className="mt-3 text-3xl font-black tracking-[-0.05em]">Inzeráty autobusů</h2><div className="mt-6 grid gap-4">{items.map((item) => <div key={item.id} className="grid gap-4 rounded-[1.6rem] bg-[#fffcf7] p-4 ring-1 ring-black/5 sm:grid-cols-[7rem_1fr] sm:items-center"><img src={item.image} alt={item.title} className="h-24 w-full rounded-2xl object-cover sm:w-28"/><div><div className="text-lg font-black">{item.title}</div><div className="mt-1 text-xs font-bold text-[#0a1020]/48">{item.year} • {item.mileage} • {item.seats}</div><div className="mt-2 text-sm font-black text-[#e65a26]">{item.price}</div></div></div>)}</div></section></div>}{tab === "contacts" && <section className="rounded-[2.4rem] bg-white p-5 shadow-[0_24px_80px_rgba(10,16,32,0.08)] ring-1 ring-black/5"><h2 className="text-3xl font-black">Kontakty</h2><div className="mt-6 grid gap-4">{contactsData.map((c) => <div key={c.id} className="rounded-[1.7rem] bg-[#fffcf7] p-5 ring-1 ring-black/5"><div className="text-xs font-black uppercase tracking-wide text-[#e65a26]">{c.type}</div><div className="mt-1 text-xl font-black">{c.name}</div><div className="mt-2 text-sm font-bold text-[#0a1020]/55">{c.phone} • {c.email}</div></div>)}</div></section>}{tab === "forms" && <section className="rounded-[2.4rem] bg-white p-5 shadow-[0_24px_80px_rgba(10,16,32,0.08)] ring-1 ring-black/5"><h2 className="text-3xl font-black">Vyplněné formuláře</h2><div className="mt-6 grid gap-4">{formSubmissions.map((f) => <div key={f.id} className="rounded-[1.7rem] bg-[#fffcf7] p-5 ring-1 ring-black/5"><div className="text-lg font-black">{f.name || f.email}</div><div className="mt-1 text-sm font-bold text-[#0a1020]/55">{f.type} • {f.createdAtDisplay}</div></div>)}{formSubmissions.length === 0 && <div className="rounded-[1.7rem] bg-[#fffcf7] p-6 text-sm font-bold text-[#0a1020]/55 ring-1 ring-black/5">Zatím nebyl v této relaci odeslán žádný formulář.</div>}</div></section>}{tab === "security" && <section className="rounded-[2.4rem] bg-white p-5 shadow-[0_24px_80px_rgba(10,16,32,0.08)] ring-1 ring-black/5"><h2 className="text-3xl font-black">Zabezpečení</h2><div className="mt-5 rounded-[1.4rem] bg-orange-50 p-5 text-sm font-bold leading-6 text-orange-800 ring-1 ring-orange-200">Toto je prezentační prototyp. V ostré verzi musí být přihlášení řešeno na backendu.</div></section>}</div></main>; }
 function MobileBar({ t }) { const openLead = (type) => { window.dispatchEvent(new CustomEvent("autobusy-open-lead", { detail: { type } })); document.getElementById("kontakt")?.scrollIntoView({ behavior: "smooth", block: "start" }); }; return <motion.div initial={{ y: 80 }} animate={{ y: 0 }} transition={{ delay: 0.8, duration: 0.4 }} className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-4 gap-2 border-t border-black/10 bg-[#fffcf7]/94 p-2 shadow-2xl backdrop-blur-2xl lg:hidden"><a href={CONTACT.phoneHref} className="flex flex-col items-center justify-center rounded-2xl bg-black/[0.04] px-2 py-2 text-[11px] font-black text-[#0a1020]"><Phone className="mb-1 h-5 w-5 text-[#e65a26]"/> {t.phoneShort || "Tel"}</a><a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-center rounded-2xl bg-[#25D366] px-2 py-2 text-[11px] font-black text-white shadow-[0_10px_28px_rgba(37,211,102,0.22)]"><MessageCircle className="mb-1 h-5 w-5"/> {t.whatsappShort || "WA"}</a><button type="button" onClick={() => openLead("sell")} className="flex flex-col items-center justify-center rounded-2xl bg-[#0a1020] px-2 py-2 text-[11px] font-black text-white"><Upload className="mb-1 h-5 w-5 text-[#f1a37f]"/> {t.sellCta}</button><button type="button" onClick={() => openLead("buy")} className="flex flex-col items-center justify-center rounded-2xl bg-[#e65a26] px-2 py-2 text-[11px] font-black text-white"><Search className="mb-1 h-5 w-5"/> {t.buyCta}</button></motion.div>; }
-export default function AutobusyOnePage() { const [lang, setLang] = useState(getLang()); const [page, setPage] = useState(getPage()); const [vehicleItems, setVehicleItems] = useState(vehicles); const [legalType, setLegalType] = useState(null); const [formSubmissions, setFormSubmissions] = useState([]); const [backendContacts, setBackendContacts] = useState([{ id: 1, type: "Prodej autobusu", name: "Jan Novák", phone: "+420 777 111 222", email: "jan@example.cz" }, { id: 2, type: "Poptávka koupě", name: "Dopravce CZ", phone: "+420 608 000 000", email: "nakup@example.cz" }]); const t = useMemo(() => COPY[lang] || COPY.cs, [lang]); const handleFormSubmit = (payload) => { const id = Date.now(); const submission = { id, ...payload, createdAtDisplay: payload.createdAtDisplay || new Date().toLocaleString("cs-CZ") }; setFormSubmissions((current) => [submission, ...current]); setBackendContacts((current) => [{ id, type: payload.type || "Kontakt", name: payload.name || payload.email || "Neuvedeno", phone: payload.phone || "", email: payload.email || "" }, ...current]); }; const openAdmin = () => { setPage("admin"); window.history.pushState({}, "", "/admin"); window.scrollTo({ top: 0, behavior: "smooth" }); }; const openWeb = () => { setPage("home"); window.history.pushState({}, "", COPY[lang]?.path || "/"); window.scrollTo({ top: 0, behavior: "smooth" }); }; const openAllListings = () => { setPage("listings"); window.history.pushState({}, "", "/nabidka-autobusu"); window.scrollTo({ top: 0, behavior: "smooth" }); }; useEffect(() => { const onPopState = () => { setLang(getLang()); setPage(getPage()); }; const onLegalOpen = (event) => setLegalType(event.detail?.type || "terms"); window.addEventListener("popstate", onPopState); window.addEventListener("autobusy-open-legal", onLegalOpen); return () => { window.removeEventListener("popstate", onPopState); window.removeEventListener("autobusy-open-legal", onLegalOpen); }; }, []); if (page === "admin") return <AdminPanel onBack={openWeb} listings={vehicleItems} onListingsChange={setVehicleItems} contactsData={backendContacts} formSubmissions={formSubmissions}/>; if (page === "listings") return <AllListingsPage t={t} onBack={openWeb} vehiclesData={vehicleItems}/>; return <main className="min-h-screen bg-white pb-20 font-sans text-[#0a1020] antialiased selection:bg-[#e65a26] selection:text-white lg:pb-0"><Header t={t} lang={lang} onLanguageChange={setLang}/><Hero t={t}/><BrokerageSection t={t}/><Listings t={t} onOpenAll={openAllListings} vehiclesData={vehicleItems}/><Contact t={t} onFormSubmit={handleFormSubmit}/><WhySection t={t}/><NewsletterSignup t={t} onFormSubmit={handleFormSubmit}/><Footer t={t} onAdminOpen={openAdmin} onLegalOpen={setLegalType}/><LegalModal type={legalType} onClose={() => setLegalType(null)} t={t}/><MobileBar t={t}/></main>; }
+function submissionToContact(payload, index = 0) {
+  const id = payload.id || Date.now() + index;
+  const category = payload.category || (payload.type === "Odběr nových inzerátů" ? "newsletter" : "lead");
+  return {
+    id,
+    source: payload.source || "formulář webu",
+    type: payload.type || (category === "newsletter" ? "Odběr novinek" : "Kontakt z webu"),
+    name: payload.name || (payload.email ? "Newsletter" : "Neuvedeno"),
+    phone: payload.phone || "",
+    email: payload.email || "",
+    vehicle: payload.sellModel || payload.buyType || payload.vehicle || payload.type || "",
+    status: payload.status || (category === "newsletter" ? "aktivní" : "nové"),
+    priority: payload.priority || (category === "newsletter" ? "nízká" : "běžná"),
+    owner: payload.owner || "nepřiřazeno",
+    note: payload.note || payload.buyNote || "",
+    createdAt: payload.createdAt || new Date().toISOString(),
+    createdAtDisplay: payload.createdAtDisplay || new Date().toLocaleString("cs-CZ"),
+    updatedAtDisplay: payload.updatedAtDisplay || payload.createdAtDisplay || new Date().toLocaleString("cs-CZ"),
+    consent: payload.consent || "ano",
+    deliveryStatus: payload.deliveryStatus || "uloženo backendem",
+  };
+}
+
+async function saveToBackend(path, payload) {
+  try {
+    const response = await fetch(path, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+export default function AutobusyOnePage() {
+  const [lang, setLang] = useState(getLang());
+  const [page, setPage] = useState(getPage());
+  const [vehicleItems, setVehicleItems] = useState(vehicles);
+  const [legalType, setLegalType] = useState(null);
+  const [formSubmissions, setFormSubmissions] = useState([]);
+  const [backendContacts, setBackendContacts] = useState([
+    { id: 1, source: "demo", type: "Prodej autobusu", name: "Jan Novák", phone: "+420 777 111 222", email: "jan@example.cz", vehicle: "SETRA S 515 HD", status: "nové", priority: "běžná", owner: "nepřiřazeno", note: "Doplnit fotografie a představu ceny.", createdAt: "2026-05-16T09:10:00.000Z", createdAtDisplay: "16. 5. 2026 09:10", updatedAtDisplay: "16. 5. 2026 09:10", consent: "ano" },
+    { id: 2, source: "demo", type: "Poptávka koupě", name: "Dopravce CZ", phone: "+420 608 000 000", email: "nakup@example.cz", vehicle: "zájezdový autobus Euro 6", status: "rozpracováno", priority: "vysoká", owner: "obchod", note: "Hledá 49–55 míst, rozpočet do 2,5 mil. Kč.", createdAt: "2026-05-15T13:35:00.000Z", createdAtDisplay: "15. 5. 2026 13:35", updatedAtDisplay: "16. 5. 2026 08:20", consent: "ano" },
+    { id: 3, source: "demo", type: "Odběr novinek", name: "Newsletter", phone: "", email: "info@example.cz", vehicle: "nové inzeráty", status: "aktivní", priority: "nízká", owner: "marketing", note: "Souhlas s odběrem evidován.", createdAt: "2026-05-12T18:02:00.000Z", createdAtDisplay: "12. 5. 2026 18:02", updatedAtDisplay: "12. 5. 2026 18:02", consent: "ano" },
+  ]);
+
+  const t = useMemo(() => COPY[lang] || COPY.cs, [lang]);
+
+  useEffect(() => {
+    let active = true;
+    async function loadBackendState() {
+      try {
+        const response = await fetch("/api/state", { headers: { Accept: "application/json" } });
+        if (!response.ok) return;
+        const data = await response.json();
+        if (!active || !data?.ok) return;
+
+        if (Array.isArray(data.listings) && data.listings.length) setVehicleItems(data.listings);
+
+        const backendSubmissions = [
+          ...(Array.isArray(data.leads) ? data.leads.map((item) => ({ ...item, category: "lead" })) : []),
+          ...(Array.isArray(data.newsletter) ? data.newsletter.map((item) => ({ ...item, category: "newsletter" })) : []),
+        ].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+        if (backendSubmissions.length) setFormSubmissions(backendSubmissions);
+
+        const persistedContacts = Array.isArray(data.contacts) ? data.contacts : [];
+        if (persistedContacts.length || backendSubmissions.length) {
+          const submissionContacts = backendSubmissions.map((item, index) => submissionToContact(item, index));
+          const merged = [...persistedContacts, ...submissionContacts].filter((contact, index, all) =>
+            index === all.findIndex((candidate) => String(candidate.id) === String(contact.id))
+          );
+          setBackendContacts(merged);
+        }
+      } catch {
+        // Fallback na demo data, pokud backend běží jen staticky nebo není dostupný.
+      }
+    }
+    loadBackendState();
+    return () => { active = false; };
+  }, []);
+
+  const handleListingsChange = (nextItems) => {
+    setVehicleItems(nextItems);
+    saveToBackend("/api/listings", nextItems);
+  };
+
+  const handleFormSubmit = (payload) => {
+    const id = Date.now();
+    const submission = {
+      id,
+      ...payload,
+      createdAt: payload.createdAt || new Date().toISOString(),
+      createdAtDisplay: payload.createdAtDisplay || new Date().toLocaleString("cs-CZ"),
+      status: "nové",
+      note: "",
+    };
+    setFormSubmissions((current) => [submission, ...current]);
+    setBackendContacts((current) => [submissionToContact(submission), ...current]);
+  };
+
+  const openAdmin = () => {
+    setPage("admin");
+    window.history.pushState({}, "", "/admin");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const openWeb = () => {
+    setPage("home");
+    window.history.pushState({}, "", COPY[lang]?.path || "/");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const openAllListings = () => {
+    setPage("listings");
+    window.history.pushState({}, "", "/nabidka-autobusu");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    const onPopState = () => { setLang(getLang()); setPage(getPage()); };
+    const onLegalOpen = (event) => setLegalType(event.detail?.type || "terms");
+    window.addEventListener("popstate", onPopState);
+    window.addEventListener("autobusy-open-legal", onLegalOpen);
+    return () => {
+      window.removeEventListener("popstate", onPopState);
+      window.removeEventListener("autobusy-open-legal", onLegalOpen);
+    };
+  }, []);
+
+  if (page === "admin") {
+    return <AdminPanel onBack={openWeb} listings={vehicleItems} onListingsChange={handleListingsChange} contactsData={backendContacts} formSubmissions={formSubmissions} />;
+  }
+
+  if (page === "listings") {
+    return <AllListingsPage t={t} onBack={openWeb} vehiclesData={vehicleItems} />;
+  }
+
+  return (
+    <main className="min-h-screen bg-white pb-20 font-sans text-[#0a1020] antialiased selection:bg-[#e65a26] selection:text-white lg:pb-0">
+      <Header t={t} lang={lang} onLanguageChange={setLang} />
+      <Hero t={t} />
+      <BrokerageSection t={t} />
+      <Listings t={t} onOpenAll={openAllListings} vehiclesData={vehicleItems} />
+      <Contact t={t} onFormSubmit={handleFormSubmit} />
+      <WhySection t={t} />
+      <NewsletterSignup t={t} onFormSubmit={handleFormSubmit} />
+      <Footer t={t} onAdminOpen={openAdmin} onLegalOpen={setLegalType} />
+      <LegalModal type={legalType} onClose={() => setLegalType(null)} t={t} />
+      <MobileBar t={t} />
+    </main>
+  );
+}
